@@ -1,7 +1,7 @@
 package com.example.triggerframeworkdemo.workerui
 
 import android.Manifest
-import android.app.Application
+import android.icu.util.Calendar
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
@@ -17,12 +17,14 @@ import androidx.work.*
 import com.example.triggerframeworkdemo.viewmodel.TestViewModel
 
 @Composable
-fun WorkerControlButton(testViewModel: TestViewModel, application: Application) {
+fun WorkerControlButton(testViewModel: TestViewModel) {
     //get the testWorker information
-    val workInfos by WorkManager.getInstance(application.applicationContext).getWorkInfosByTagLiveData("1").observeAsState()
+    //val workInfos by WorkManager.getInstance(application.applicationContext).getWorkInfosByTagLiveData("1").observeAsState()
+    val workInfos by testViewModel.workManager.getWorkInfosForUniqueWorkLiveData("test1").observeAsState()
+
     val testInfo = remember(key1 = workInfos) {
         mutableStateOf(
-        workInfos?.find { it.id == (testViewModel.getWorkerRequest().id) }
+        workInfos?.find { it.id == testViewModel.lastId }
         )
     }
 
@@ -36,10 +38,11 @@ fun WorkerControlButton(testViewModel: TestViewModel, application: Application) 
         //start work
         Button(
             onClick = {
-                //create WorkerRequest
-                testViewModel.createWorkerRequest()
+                //create WorkerRequest if it is not created
+                testViewModel.createPeriodicWorkerRequest(13,36)
                 //start the new one
-                testViewModel.startWorker()
+                //testViewModel.startOneTimeWork()
+                testViewModel.startPeriodicWork()
             },
             enabled = testInfo.value?.state != WorkInfo.State.RUNNING
         ) {
@@ -48,9 +51,9 @@ fun WorkerControlButton(testViewModel: TestViewModel, application: Application) 
         //stop work
         Button(
             onClick = {
-                testViewModel.cancelWorker()
+                testViewModel.cancelPeriodicWorker()
             },
-            enabled = testInfo.value?.state == WorkInfo.State.RUNNING
+            enabled = testInfo.value?.state == WorkInfo.State.RUNNING || testInfo.value?.state == WorkInfo.State.ENQUEUED
         ) {
             Text(text = "Stop Test")
         }

@@ -1,37 +1,37 @@
 package com.example.triggerframeworkdemo.workers
 
 import android.content.Context
+import android.os.SystemClock.sleep
 import androidx.core.app.NotificationCompat
-import androidx.work.CoroutineWorker
-import androidx.work.ForegroundInfo
+import androidx.core.app.NotificationManagerCompat
+import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.example.triggerframeworkdemo.R
-import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 class TestWorker constructor(
     private val context: Context,
     private val workerParameters: WorkerParameters
-) : CoroutineWorker(context, workerParameters) {
+) : Worker(context, workerParameters) {
 
-    override suspend fun doWork(): Result {
+    override fun doWork(): Result {
         for (i in 1 until 20) {
-            delay(3000L)
-            startForegroundService("Test is progress $i")
+            sleep(3000L)
+            makeNotification("Test is progress $i")
         }
         return Result.success()
     }
 
-    private suspend fun startForegroundService(text: String) {
-        setForeground(
-            ForegroundInfo(
-                Random.nextInt(),
-                NotificationCompat.Builder(context, "1")
-                    .setContentText("Testing")
-                    .setContentTitle(text)
-                    .setSmallIcon(R.drawable.ic_launcher_background)
-                    .build()
-            )
-        )
+    private fun makeNotification(text: String) {
+        //create a notification
+        val notificationBuilder = NotificationCompat.Builder(context, "1")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(text)
+            .setContentText("Testing")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVibrate(LongArray(0))
+
+        //show the notification
+        NotificationManagerCompat.from(context).notify(Random.nextInt(), notificationBuilder.build())
     }
 }

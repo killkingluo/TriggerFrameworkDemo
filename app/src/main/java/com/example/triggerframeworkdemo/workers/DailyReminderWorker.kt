@@ -1,37 +1,62 @@
 package com.example.triggerframeworkdemo.workers
 
 import android.content.Context
+import android.icu.util.Calendar
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
-import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.example.triggerframeworkdemo.R
-import kotlinx.coroutines.delay
 import kotlin.random.Random
 
+@Suppress("UNREACHABLE_CODE")
 class DailyReminderWorker constructor(
     private val context: Context,
     private val workerParameters: WorkerParameters
 ) : CoroutineWorker(context, workerParameters) {
 
     override suspend fun doWork(): Result {
-        for (i in 1 until 20) {
-            delay(3000L)
-            startForegroundService("Test is progress $i")
+        val a = 4000
+        val b =  8000
+        val percentage = a.toFloat() / b.toFloat() * 100
+        val c1 = inputData.getBoolean("detectWeekendFlag", false)
+        if(c1) {
+            if(Calendar.getInstance().isWeekend) {
+                makeNotification("Today is weekend, let's take a walk~")
+                return Result.success()
+            }
+            else {
+                if(percentage < 50) {
+                    makeNotification("Today's walk  is ${ String.format("%.2f",percentage) }%, please walk more~")
+                    return Result.success()
+                }
+                else if(percentage < 80) {
+                    makeNotification("Today's walk  is ${ String.format("%.2f",percentage) }%, you are doing great~")
+                    return Result.success()
+                }
+                else if(percentage < 100) {
+                    makeNotification("Today's walk  is ${ String.format("%.2f",percentage) }%, you are almost there~")
+                    return Result.success()
+                }
+                else {
+                    makeNotification("Congratulation! Today's walk  is ${ String.format("%.2f",percentage) }%, you have walked enough~")
+                    return Result.success()
+                }
+            }
         }
-        return Result.succ
+        return Result.success()
     }
 
-    private suspend fun startForegroundService(text: String) {
-        setForeground(
-            ForegroundInfo(
-                Random.nextInt(),
-                NotificationCompat.Builder(context, "1")
-                    .setContentText("Testing")
-                    .setContentTitle(text)
-                    .setSmallIcon(R.drawable.ic_launcher_background)
-                    .build()
-            )
-        )
+    private fun makeNotification(text: String) {
+        //create a notification
+        val notificationBuilder = NotificationCompat.Builder(context, "1")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Testing")
+            .setContentText(text)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVibrate(LongArray(0))
+
+        //show the notification
+        NotificationManagerCompat.from(context).notify(Random.nextInt(), notificationBuilder.build())
     }
 }
