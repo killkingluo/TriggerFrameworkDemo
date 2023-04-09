@@ -1,6 +1,8 @@
 package com.example.triggerframeworkdemo
 
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -16,7 +18,7 @@ class MainActivity : ComponentActivity() {
         val testViewModel: TestViewModel by viewModels()
         setContent {
             TriggerFrameworkDemoTheme {
-                WorkerControlButton(testViewModel)
+                WorkerControlButton(testViewModel, application)
             }
         }
     }

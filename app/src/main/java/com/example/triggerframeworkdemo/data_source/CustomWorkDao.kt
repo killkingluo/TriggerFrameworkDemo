@@ -1,5 +1,6 @@
 package com.example.triggerframeworkdemo.data_source
 
+import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -20,7 +21,7 @@ interface CustomWorkDao {
     fun getWorkByName(name: String): CustomWork
 
     @Query("SELECT id FROM customwork_table LIMIT 1")
-    fun getLastWorkId(): UUID?
+    fun getLastWorkId(): LiveData<UUID>?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWork(customWork: CustomWork)

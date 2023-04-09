@@ -2,16 +2,17 @@ package com.example.triggerframeworkdemo.viewmodel
 
 import android.app.Application
 import android.icu.util.Calendar
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.work.*
 import com.example.triggerframeworkdemo.entity.CustomWork
 import com.example.triggerframeworkdemo.repository.CustomWorkRepository
 import com.example.triggerframeworkdemo.workers.DailyReminderWorker
-import com.example.triggerframeworkdemo.workers.TestWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -20,9 +21,7 @@ interface TestViewModelAbstract {
 
     fun createPeriodicWorkerRequest(hour: Int, minute: Int)
 
-    fun cancelOneTimeWorker()
-
-    fun cancelPeriodicWorker()
+    fun cancelWork(id : UUID)
 
     fun insertWork(customWork: CustomWork)
 }
@@ -33,12 +32,13 @@ class TestViewModel @Inject constructor(
     application: Application,
     private val customWorkRepository: CustomWorkRepository
 ) : ViewModel(), TestViewModelAbstract {
+
     private val ioScope = CoroutineScope(Dispatchers.IO)
 
     //create a workManager
     val workManager = WorkManager.getInstance(application.applicationContext)
 
-    var oneTimeWorkerRequest = OneTimeWorkRequestBuilder<TestWorker>()
+    var oneTimeWorkerRequest = OneTimeWorkRequestBuilder<DailyReminderWorker>()
         .setConstraints(
             Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
@@ -47,7 +47,7 @@ class TestViewModel @Inject constructor(
         .setInitialDelay(timeTransform(12, 0), TimeUnit.MILLISECONDS)
         .build()
 
-    var periodicWorkerRequest = PeriodicWorkRequestBuilder<TestWorker>(1, TimeUnit.DAYS)
+    var periodicWorkerRequest = PeriodicWorkRequestBuilder<DailyReminderWorker>(1, TimeUnit.DAYS)
         .setConstraints(
             Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
@@ -61,7 +61,6 @@ class TestViewModel @Inject constructor(
         .putBoolean("detectWeekendFlag", true)
         .build()
 
-    val lastId = customWorkRepository.getLastWorkId()
     //create oneTimeWorkerRequest
     override fun createOneTimeWorkerRequest(hour: Int, minute: Int) {
         val oneTimeWorkerRequest = OneTimeWorkRequestBuilder<DailyReminderWorker>()
@@ -110,16 +109,15 @@ class TestViewModel @Inject constructor(
         )
     }
 
-    override fun cancelOneTimeWorker() {
-        if (lastId != null) {
-            workManager.cancelWorkById(lastId)
-        }
+    override fun cancelWork(id : UUID) {
+            workManager.cancelWorkById(id)
+        insertWork(
+            customWork = CustomWork(id, "test1", 2)
+        )
     }
 
-    override fun cancelPeriodicWorker() {
-        if (lastId != null) {
-            workManager.cancelWorkById(lastId)
-        }
+    fun getLastWorkId(): LiveData<UUID>? {
+        return customWorkRepository.getLastWorkId()
     }
 
     override fun insertWork(customWork: CustomWork) {

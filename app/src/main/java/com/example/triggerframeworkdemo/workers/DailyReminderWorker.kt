@@ -4,18 +4,20 @@ import android.content.Context
 import android.icu.util.Calendar
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.work.CoroutineWorker
+import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.example.triggerframeworkdemo.R
+import com.example.triggerframeworkdemo.manager.DataManager
 import kotlin.random.Random
 
 @Suppress("UNREACHABLE_CODE")
 class DailyReminderWorker constructor(
     private val context: Context,
-    private val workerParameters: WorkerParameters
-) : CoroutineWorker(context, workerParameters) {
+    private val workerParameters: WorkerParameters,
+    private val dataManager: DataManager
+) : Worker(context, workerParameters) {
 
-    override suspend fun doWork(): Result {
+    override fun doWork(): Result {
         val a = 4000
         val b =  8000
         val percentage = a.toFloat() / b.toFloat() * 100

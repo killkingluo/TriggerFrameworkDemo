@@ -1,5 +1,6 @@
 package com.example.triggerframeworkdemo.repository
 
+import androidx.lifecycle.LiveData
 import com.example.triggerframeworkdemo.data_source.CustomWorkDao
 import com.example.triggerframeworkdemo.entity.CustomWork
 import kotlinx.coroutines.flow.Flow
@@ -12,7 +13,7 @@ class CustomWorkRepository(private val customWorkDao: CustomWorkDao) {
 
     fun getWorkByName(name: String): CustomWork = customWorkDao.getWorkByName(name)
 
-    fun getLastWorkId(): UUID? = customWorkDao.getLastWorkId()
+    fun getLastWorkId(): LiveData<UUID>? = customWorkDao.getLastWorkId()
 
     suspend fun insertWork(customWork: CustomWork) = customWorkDao.insertWork(customWork)
 

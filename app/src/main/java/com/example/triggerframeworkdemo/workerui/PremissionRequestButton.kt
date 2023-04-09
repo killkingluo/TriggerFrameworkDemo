@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 
 @Composable
-fun NotificationPermissionCheckButton(permission: String) {
+fun PermissionRequestButton(permission: String, name: String) {
     val context = LocalContext.current
     var hasNotificationPermission by remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -38,7 +38,7 @@ fun NotificationPermissionCheckButton(permission: String) {
 
     Column(
         modifier = Modifier
-            .padding(16.dp),
+            .padding(2.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -51,7 +51,7 @@ fun NotificationPermissionCheckButton(permission: String) {
                 }
             }
         ) {
-            Text(text = "Request permission")
+            Text(text = "$name permission")
         }
     }
 }
