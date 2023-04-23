@@ -4,20 +4,22 @@ package com.example.triggerframeworkdemo.service
 import android.app.Notification
 import android.app.Service
 import android.content.Intent
-import android.icu.util.Calendar
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.*
 import androidx.lifecycle.Observer
 import androidx.work.*
 import com.example.triggerframeworkdemo.R
-import com.example.triggerframeworkdemo.data_source.TriggerFrameworkAppDatabase
 import com.example.triggerframeworkdemo.entity.Record
 import com.example.triggerframeworkdemo.function.getTodayTimestamp
+import com.example.triggerframeworkdemo.function.timeTransform
 import com.example.triggerframeworkdemo.manager.DataManager
 import com.example.triggerframeworkdemo.manager.MessageManager
-import com.example.triggerframeworkdemo.workers.TestWorker
+import com.example.triggerframeworkdemo.workers.EverydayReminderWorker
+import com.example.triggerframeworkdemo.workers.WeatherTriggerWorker
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,23 +30,17 @@ import kotlin.random.Random
 
 @AndroidEntryPoint
 class TestService : Service(), LifecycleOwner {
-    //var triggerFrameworkAppDatabase = TriggerFrameworkAppDatabase.getInstance(this)
 
     @Inject lateinit var dataManager: DataManager
-
-    //var dataManager: DataManager = DataManager(database = triggerFrameworkAppDatabase)
-
-    var messageManager: MessageManager = MessageManager(this)
+    @Inject lateinit var messageManager: MessageManager
 
     private lateinit var lifecycleRegistry: LifecycleRegistry
 
-    private val tag = "TestService"
     private val ioScope = CoroutineScope(Dispatchers.IO)
 
     //create a workManager
     private val workManager = WorkManager.getInstance(this)
-    private val workInfoLiveData: LiveData<MutableList<WorkInfo>> =
-        workManager.getWorkInfosForUniqueWorkLiveData("test")
+//    private val workInfoLiveData: LiveData<MutableList<WorkInfo>> = workManager.getWorkInfosForUniqueWorkLiveData("test")
 
     //the data that will be passed to the worker
     private var data: Data = Data.Builder()
@@ -53,19 +49,22 @@ class TestService : Service(), LifecycleOwner {
 
     override fun onBind(p0: Intent?): IBinder? = null
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onCreate()
         startForeground(Random.nextInt(), makeNotification("Start Test Service"))
         lifecycleRegistry = LifecycleRegistry(this)
         lifecycleRegistry.markState(Lifecycle.State.STARTED)
-        stepsDataObserverAndTrigger()
-        midDayMessageSendTrigger(15, 54)
+        //stepsDataObserverAndTrigger()
+        //everyDayMessageSendTrigger(15, 54)
+        weatherTrigger(18, 29)
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        workManager.cancelUniqueWork("test")
+        workManager.cancelUniqueWork("everyDayMessageSendTrigger")
+        workManager.cancelUniqueWork("weatherTrigger")
         lifecycleRegistry.markState(Lifecycle.State.DESTROYED)
     }
 
@@ -80,7 +79,7 @@ class TestService : Service(), LifecycleOwner {
         //set up the steps data observer
         val infoObserver = Observer<Record> { data ->
             if (data == null) {
-                Log.d(tag, "steps data is empty")
+                Log.d("TestService", "steps data is empty")
             } else {
                 val percentage =
                     (data.current_steps.toFloat() / data.target_steps.toFloat() * 100).toInt()
@@ -89,7 +88,7 @@ class TestService : Service(), LifecycleOwner {
                         .toIntArray()
                 for (i in sortedKeys) {
                     if (percentage >= i && !dataManager.getPercentageMessageSendMutableMap()[i]!!) {
-                        messageManager.evaluatePercentageAndSendMessage(percentage)
+                        messageManager.messageGenerationAndSend(0, dataManager.getUserType().type, percentage)
                         dataManager.setPercentageMessageSendMutableMap(i, true)
                         for (j in sortedKeys) {
                             if (j < i) {
@@ -104,19 +103,21 @@ class TestService : Service(), LifecycleOwner {
         todayRecord.observe(this@TestService, infoObserver)
         //insert test data
         ioScope.launch {
-            dataManager.insertRecord(
-                Record(
-                    joined_date = getTodayTimestamp(),
-                    current_steps = 9999,
-                    target_steps = 10000,
+            for(i in 0..6) {
+                dataManager.insertRecord(
+                    Record(
+                        joined_date = getTodayTimestamp()-86400000*i,
+                        current_steps = 1500-i,
+                        target_steps = 10000,
+                    )
                 )
-            )
+            }
         }
     }
 
-    private fun midDayMessageSendTrigger(hour: Int, minute: Int) {
+    private fun everyDayMessageSendTrigger(hour: Int, minute: Int) {
 
-        val oneTimeWorkerRequest = OneTimeWorkRequestBuilder<TestWorker>()
+        val periodWorkRequest = PeriodicWorkRequestBuilder<EverydayReminderWorker>(1, TimeUnit.DAYS)
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
@@ -126,35 +127,33 @@ class TestService : Service(), LifecycleOwner {
             .setInputData(data)
             .build()
 
-        val periodWorkRequest = PeriodicWorkRequestBuilder<TestWorker>(1, TimeUnit.DAYS)
+        workManager.enqueueUniquePeriodicWork("everyDayMessageSendTrigger", ExistingPeriodicWorkPolicy.REPLACE, periodWorkRequest)
+    }
+
+    private fun weatherTrigger(hour: Int, minute: Int) {
+        //insert test data
+        ioScope.launch {
+            for(i in 0..6) {
+                dataManager.insertRecord(
+                    Record(
+                        joined_date = getTodayTimestamp()-86400000*i,
+                        current_steps = 1500-i,
+                        target_steps = 10000,
+                    )
+                )
+            }
+        }
+        val periodWorkRequest = PeriodicWorkRequestBuilder<WeatherTriggerWorker>(1, TimeUnit.DAYS)
             .setConstraints(
                 Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
+                    .setRequiredNetworkType(NetworkType.NOT_ROAMING)
                     .build()
             )
             .setInitialDelay(timeTransform(hour, minute), TimeUnit.MILLISECONDS)
             .setInputData(data)
             .build()
 
-        //workManager.enqueueUniqueWork("test", ExistingWorkPolicy.REPLACE, oneTimeWorkerRequest)
-        workManager.enqueueUniquePeriodicWork("test", ExistingPeriodicWorkPolicy.REPLACE, periodWorkRequest)
-    }
-
-    //calculate the time difference between now and the time to start the worker
-    private fun timeTransform(hour: Int, minute: Int): Long {
-        val calendar: Calendar = Calendar.getInstance()
-        val nowMillis: Long = calendar.timeInMillis
-
-        calendar.set(Calendar.HOUR_OF_DAY, hour)
-        calendar.set(Calendar.MINUTE, minute)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-
-        if (calendar.before(Calendar.getInstance())) {
-            calendar.add(Calendar.DATE, 1)
-        }
-
-        return calendar.timeInMillis - nowMillis
+        workManager.enqueueUniquePeriodicWork("weatherTrigger", ExistingPeriodicWorkPolicy.REPLACE, periodWorkRequest)
     }
 
     private fun makeNotification(text: String): Notification {

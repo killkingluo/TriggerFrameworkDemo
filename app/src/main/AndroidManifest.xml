@@ -3,16 +3,26 @@
     xmlns:tools="http://schemas.android.com/tools" >
 
     <!-- notification permission -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <!-- internet permission -->
-    <uses-permission android:name="android.permission.INTERNET" /> <!-- Google activity recognition permission -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- internet permission -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Google activity recognition permission -->
     <!-- Required for 28 and below. -->
-    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" /> <!-- Required for 29+. -->
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" /> <!-- Allow app to receive the BOOT_COMPLETED broadcast -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> <!-- Allow app to get user location -->
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <!-- Required for 29+. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Allow app to receive the BOOT_COMPLETED broadcast -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Allow app to get user location -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /> <!-- Allow app to start a foreground service -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Allow app to start a foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Allow app to know the power mode change -->
+    <uses-permission android:name="android.permission.BATTERY_STATS"
+        tools:ignore="ProtectedPermissions" />
+
 
     <application
         android:name=".TriggerFrameworkApp"
@@ -37,6 +47,15 @@
         </activity>
 
         <service android:name=".service.TestService" />
+
+        <receiver
+            android:name=".broadcast.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.startup.InitializationProvider"
